@@ -1,0 +1,6 @@
+location             = ""
+resource_group_name  = ""
+storage_account_name = ""
+container_name       = ""
+blob_source_uri      = ""
+subscription_id      = ""
