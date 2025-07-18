@@ -1,0 +1,82 @@
+trigger:
+- none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  cloudflare_zone_id: ''
+  cloudflare_api_token: ''
+  azure_subscription_id: ''
+  backend_resource_group_name : ''
+  backend_storage_account_name : ''
+  backend_container_name : ''
+  backend_key : ''
+  project_name: ''
+  environment: ''
+  location: ''
+  website_hostname: ''
+  cdn_hostname: ''
+
+
+stages:
+  - stage: terraformvalidate
+    jobs:
+      - job: terraformvalidate
+        continueOnError: false
+        steps:
+          - task: TerraformInstaller@1
+            displayName: terraforminstall
+            inputs:
+              terraformVersion: 'latest'
+          - task: TerraformTask@5
+            displayName: terraforminit
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: 'terraform'
+              backendAzureRmResourceGroupName: '$(backend_resource_group_name)'
+              backendAzureRmStorageAccountName: '$(backend_storage_account_name)'
+              backendAzureRmContainerName: '$(backend_container_name)'
+              backendAzureRmKey: '$(backend_key)'
+              
+          - task: TerraformTask@5
+            displayName: terraformvalidate
+            inputs:
+              provider: 'azurerm'
+              command: 'validate'
+
+  - stage: terraformdeploy
+    condition: succeeded('terraformvalidate')
+    dependsOn: terraformvalidate
+    jobs:
+      - job: terraformapply
+        steps:
+          - task: TerraformInstaller@1
+            displayName: terraforminstall
+            inputs:
+              terraformVersion: 'latest'
+          - task: TerraformTaskV4@4
+            displayName: terraforminit
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: 'terraform'
+              backendAzureRmResourceGroupName: '$(backend_resource_group_name)'
+              backendAzureRmStorageAccountName: '$(backend_storage_account_name)'
+              backendAzureRmContainerName: '$(backend_container_name)'
+              backendAzureRmKey: '$(backend_key)'
+          - task: TerraformTaskV4@4
+            displayName: terraformplan
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              commandOptions: -out main.tfplan -var cloudflare_api_token="$(cloudflare_api_token)" -var cloudflare_zone_id="$(cloudflare_zone_id)" -var azure_subscription_id="$(azure_subscription_id)" -var project_name="$(project_name)" -var environment="$(environment)" -var location="$(location)" -var website_hostname="$(website_hostname)" -var cdn_hostname="$(cdn_hostname)"
+              environmentServiceNameAzureRM: 'terraform'
+          - task: TerraformTaskV4@4
+            displayName: terraformapply
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              commandOptions: -auto-approve -input=false main.tfplan
+              environmentServiceNameAzureRM: 'terraform'

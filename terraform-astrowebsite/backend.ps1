@@ -1,11 +1,20 @@
-$rgName = "tf-state-rg"
-$storageAccountName = "tfstateandrius1222"
-$containerName = "tfstate"
-$location = "uksouth"
+$rgName = ""
+$storageAccountPrefix = ""
+$containerName = ""
+$location = ""
+
+# adds random extension to prefix
+$randomExtension = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 30 | ForEach-Object {[char]$_})
+$storageAccountName = ($storageAccountPrefix + $randomExtension).ToLower()
+$storageAccountName = $storageAccountName[0..23] -join ''
 
 try {
     az group create --name $rgName --location $location
-    az storage account create --name tfstateandriusdal --location $location --resource-group $rgName
+
+    # enables storage provider for new subscriptions
+    az provider register --namespace Microsoft.Storage --wait
+    
+    az storage account create --name $storageAccountName --location $location --resource-group $rgName
 
     $accountKey = (az storage account keys list --resource-group $rgName --account-name $storageAccountName --query '[0].value' -o tsv)
 
