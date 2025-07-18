@@ -32,7 +32,7 @@ data "dns_a_record_set" "web_app_ip_address" {
 resource "cloudflare_dns_record" "web_app_a" {
   name = "${var.website_hostname}"
   ttl = 60
-  type = "TXT"
+  type = "A"
   content = data.dns_a_record_set.web_app_ip_address.addrs[0]
   zone_id = var.zone_id
   comment = "Azure Web app IP"
